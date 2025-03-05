@@ -1,0 +1,12 @@
+streamlit
+streamlit-authenticator
+openai
+faiss-cpu
+sentence-transformers
+PyMuPDF
+tiktoken
+pandas
+numpy
+python-dotenv
+watchdog
+google-generativeai
