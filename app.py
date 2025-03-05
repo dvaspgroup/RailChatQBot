@@ -31,18 +31,86 @@ if os.path.exists(INDEX_FILE) and os.path.exists(METADATA_FILE):
     with open(METADATA_FILE, "rb") as f:
         pdf_metadata = pickle.load(f)
 else:
-    faiss_index = faiss.IndexFlatL2(384)  # 384 is the dimension of "all-MiniLM-L6-v2"
+    faiss_index = faiss.IndexFlatL2(384)
     pdf_metadata = {}
 
-# ---------------- UI Elements ----------------
-st.sidebar.title("📂 User Authentication")
+# -------------------- UI DESIGN --------------------
+st.set_page_config(page_title="RaiLChatbot", layout="wide")
+
+# Custom CSS for better UI
+st.markdown(
+    """
+    <style>
+    /* Sidebar Styling */
+    .stSidebar {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-right: 2px solid #ddd;
+    }
+    
+    /* Chat History Scrollable */
+    .chat-container {
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 10px;
+    }
+
+    /* User Message */
+    .user-message {
+        background-color: #DCF8C6;
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        max-width: 75%;
+        align-self: flex-end;
+    }
+
+    /* AI Message */
+    .ai-message {
+        background-color: #F0F0F0;
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        max-width: 75%;
+        align-self: flex-start;
+    }
+
+    /* Source Styling */
+    .source-text {
+        color: #888;
+        font-size: 12px;
+    }
+
+    /* User Avatar */
+    .user-avatar {
+        content: url("https://cdn-icons-png.flaticon.com/512/4333/4333609.png");
+        height: 35px;
+        width: 35px;
+    }
+
+    /* AI Avatar */
+    .ai-avatar {
+        content: url("https://cdn-icons-png.flaticon.com/512/4712/4712035.png");
+        height: 35px;
+        width: 35px;
+    }
+    
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Sidebar - User Authentication
+st.sidebar.title("🔑 User Authentication")
 user_role = st.sidebar.selectbox("Select Role", ["User", "Admin"])
 st.sidebar.markdown(f"**Current Role:** {user_role}")
 
 # Admin can upload PDFs
 if user_role == "Admin":
-    st.sidebar.subheader("Upload PDFs")
-    uploaded_files = st.sidebar.file_uploader("Drag and drop files here", type=["pdf"], accept_multiple_files=True)
+    st.sidebar.subheader("📂 Upload PDFs")
+    uploaded_files = st.sidebar.file_uploader(
+        "Drag and drop files here", type=["pdf"], accept_multiple_files=True
+    )
 
     if uploaded_files:
         for uploaded_file in uploaded_files:
@@ -74,8 +142,9 @@ if user_role == "Admin":
         with open(METADATA_FILE, "wb") as f:
             pickle.dump(pdf_metadata, f)
 
-st.title("📜 Multi-User PDF Chatbot 🤖")
-st.subheader("🔍 Ask me anything about the uploaded PDFs:")
+# -------------------- Chatbot UI --------------------
+st.title("📜 RaiLChatBot 🤖")
+st.markdown("💬 **Ask me anything about the uploaded PDFs:**")
 
 query = st.text_input("Type your question here...", key="query")
 
@@ -120,11 +189,33 @@ if st.button("Ask"):
 
 # ---------------- Display Chat History ----------------
 st.subheader("📜 Chat History")
+st.markdown('<div class="chat-container">', unsafe_allow_html=True)
 
 for chat in reversed(st.session_state.chat_history):
-    with st.container():
-        st.markdown(f"**🕒 {chat['time']}**")
-        st.markdown(f"👤 **You:** {chat['user']}")
-        st.markdown(f"🤖 **AI:** {chat['bot']}")
-        st.markdown(f"📄 **Source:** {chat['sources']}")
-        st.markdown("---")
+    st.markdown(
+        f"""
+        <div style="display: flex; align-items: center;">
+            <img class="user-avatar" />
+            <div class="user-message">
+                <b>You:</b> {chat['user']} <br>
+                <span class="source-text">🕒 {chat['time']}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        f"""
+        <div style="display: flex; align-items: center;">
+            <img class="ai-avatar" />
+            <div class="ai-message">
+                <b>🤖 AI:</b> {chat['bot']} <br>
+                <span class="source-text">📄 Source: {chat['sources']}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+st.markdown("</div>", unsafe_allow_html=True)
