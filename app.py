@@ -9,7 +9,7 @@ import datetime
 from sentence_transformers import SentenceTransformer
 
 # Set up Gemini API
-GENAI_API_KEY = "AIzaSyDWLcIDr31LsF6nK47QOYRa_Re44u9Ti2g"  # Replace with your actual key
+GENAI_API_KEY = "AIzaSyClBarKsOMvp-cll30MSoD-43IKnbyRHh4"  # Replace with your actual key
 GENAI_MODEL = "gemini-1.5-pro"
 
 genai.configure(api_key=GENAI_API_KEY)
