@@ -1,7 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import fitz  # PyMuPDF
-import pdfplumber
+#import pdfplumber
 import faiss
 import os
 import pickle
@@ -202,17 +202,17 @@ def is_valid_pdf(file_path):
         logging.error(f"Invalid PDF: {e}")
         return False
 
-def extract_text_with_pdfplumber(file_path):
-    """Extract text using pdfplumber."""
-    try:
-        text = ""
-        with pdfplumber.open(file_path) as pdf:
-            for page in pdf.pages:
-                text += page.extract_text() or ""  # Handle None returns
-        return text.strip()
-    except Exception as e:
-        logging.error(f"pdfplumber failed to extract text: {e}")
-        return None
+#def extract_text_with_pdfplumber(file_path):
+#    """Extract text using pdfplumber."""
+#   try:
+#       text = ""
+#       with pdfplumber.open(file_path) as pdf:
+#           for page in pdf.pages:
+#               text += page.extract_text() or ""  # Handle None returns
+#       return text.strip()
+#   except Exception as e:
+#       logging.error(f"pdfplumber failed to extract text: {e}")
+#       return None
 
 def extract_text_with_pymupdf(file_path):
     """Extract text using PyMuPDF."""
@@ -275,7 +275,7 @@ def extract_text(file_path):
     """Extract text using the appropriate method based on file type."""
     if is_valid_pdf(file_path):
         # Try pdfplumber first
-        text = extract_text_with_pdfplumber(file_path)
+        #text = extract_text_with_pdfplumber(file_path)
         if not text:  # Fallback to PyMuPDF
             text = extract_text_with_pymupdf(file_path)
         if not text:  # Fallback to Google Cloud Vision (OCR)
