@@ -11,7 +11,7 @@ import logging
 import requests
 from sentence_transformers import SentenceTransformer
 from bs4 import BeautifulSoup
-from google.cloud import vision, storage
+from google.cloud import storage, exceptions
 from google.oauth2 import service_account
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
@@ -298,10 +298,16 @@ def upload_to_firebase(file_path, filename):
         if not blob.exists():
             raise Exception("🚨 Upload failed! Blob does not exist in Firebase.")
 
-        blob.make_public()
-        file_url = blob.public_url
-        st.sidebar.success(f"✅ File uploaded: {file_url}")
-        return file_url
+        # Check if the file exists before making it public
+        try:
+            blob.reload()  # Ensure the blob metadata is up-to-date
+            blob.make_public()
+            file_url = blob.public_url
+            st.sidebar.success(f"✅ File uploaded: {file_url}")
+            return file_url
+        except exceptions.NotFound:
+            st.sidebar.error(f"❌ File not found in Firebase Storage: {filename}")
+            return None
     except Exception as e:
         st.sidebar.error(f"❌ Upload failed: {e}")
         return None
@@ -438,7 +444,7 @@ if st.button("Ask", key="ask_button"):
                 "time": timestamp,
                 "user": query,
                 "bot": answer,
-                "sources": ", ".join(source_docs) if source_docs else "Unknown",
+                "sources": list(source_docs),  # Store sources as a list
             }
             st.session_state.chat_history.append(chat_entry)
 
@@ -472,7 +478,7 @@ if st.button("Ask", key="ask_button"):
                 "time": timestamp,
                 "user": query,
                 "bot": answer,
-                "sources": ", ".join(source_docs) if source_docs else "Unknown",
+                "sources": list(source_docs),  # Store sources as a list
             }
             st.session_state.chat_history.append(chat_entry)
 
@@ -491,7 +497,7 @@ if st.button("Ask", key="ask_button"):
             "time": timestamp,
             "user": query,
             "bot": answer,
-            "sources": "General Knowledge",
+            "sources": ["General Knowledge"],  # Default source for general knowledge
         }
         st.session_state.chat_history.append(chat_entry)
 
@@ -501,21 +507,34 @@ if st.button("Ask", key="ask_button"):
                 "timestamp": firestore.SERVER_TIMESTAMP
             })
 
-# -------------------- Sidebar Session History --------------------
-if st.session_state.user:
-    st.sidebar.markdown("### 📜 Session History")
-    sessions_ref = db.collection("sessions").document(st.session_state.user.uid).collection("user_sessions")
-    sessions = sessions_ref.order_by("timestamp", direction=firestore.Query.DESCENDING).stream()
-
-    for session in sessions:
-        session_data = session.to_dict()
-        if st.sidebar.button(f"{session_data['title']} - {session_data['time']}"):
-            st.session_state.current_session = session_data["title"]
-            st.session_state.chat_history = get_session_chats(session.id)
-
-# -------------------- Chat History --------------------
+# -------------------- Display Chat History --------------------
 st.subheader("📜 Chat History")
 for chat in st.session_state.chat_history:
     st.markdown(f"**🕒 {chat['time']} | You:** {chat['user']}")
     st.markdown(f"**🤖 AI:** {chat['bot']}")
-    st.markdown(f"📄 Source: {chat['sources']}") explain code and features and functionality also suggest your view to update
+    
+    # Display clickable sources
+    if "sources" in chat:
+        sources = chat["sources"]
+        if sources:
+            st.markdown("📄 **Sources:**")
+            for source in sources:
+                if source == "General Knowledge":
+                    st.markdown(f"- {source}")
+                elif source.startswith("http"):  # Website URL
+                    st.markdown(f"- [🌐 {source}]({source})", unsafe_allow_html=True)
+                else:  # PDF file
+                    try:
+                        # Generate Firebase Storage URL for the PDF
+                        blob = bucket.blob(f"documents/{source}")
+                        blob.reload()  # Ensure the blob metadata is up-to-date
+                        if blob.exists():
+                            blob.make_public()
+                            pdf_url = blob.public_url
+                            st.markdown(f"- [📄 {source}]({pdf_url})", unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"-  {source}")
+                    except exceptions.NotFound:
+                        st.markdown(f"-  {source}")
+                    except Exception as e:
+                        st.markdown(f"- ❌ Error accessing file: {source} ({str(e)})")
